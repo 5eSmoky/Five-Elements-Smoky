@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Five Elements Smoky is a mountain oasis short-term rental designed for direct bookings in the Smoky Mountains."
+      content="Five Elements Smoky is a direct-bookable Smoky Mountain cabin with an indoor pool, sauna, hot tub, game loft, and covered decks."
     />
     <title>Five Elements Smoky | Mountain Oasis</title>
     <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -28,80 +28,158 @@
       </a>
       <nav aria-label="Primary navigation">
         <a href="#stay">Stay</a>
+        <a href="#amenities">Amenities</a>
+        <a href="#gallery">Gallery</a>
         <a href="#calendar">Calendar</a>
-        <a href="#elements">Elements</a>
         <a href="#book">Book Direct</a>
       </nav>
     </header>
 
     <main id="top">
       <section class="hero" aria-label="Five Elements Smoky cabin">
-        <img class="hero-image" src="assets/smoky-hero.png" alt="Cabin tucked into misty mountain ridges at golden hour" />
+        <video
+          class="hero-media"
+          autoplay
+          muted
+          loop
+          playsinline
+          poster="assets/media/cabin-twilight.jpg"
+        >
+          <source src="assets/media/cinematic-tour.mp4" type="video/mp4" />
+        </video>
         <div class="hero-scrim"></div>
         <div class="hero-content">
-          <p class="eyebrow">Private Smoky Mountain stay</p>
+          <p class="eyebrow">Direct-book Smoky Mountain cabin</p>
           <h1>Five Elements Smoky</h1>
           <p class="hero-copy">
-            A warm, design-forward mountain oasis for slow mornings, creekside air, firelit evenings,
-            and direct-booked escapes without marketplace fees.
+            A private mountain oasis with an indoor pool, sauna, hot tub, game loft,
+            covered decks, and warm cabin spaces made for families and group escapes.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="#book">Check Dates</a>
-            <a class="button secondary" href="#stay">Explore The House</a>
+            <a class="button secondary" href="#gallery">View Photos</a>
           </div>
         </div>
         <aside class="quick-card" aria-label="Stay summary">
-          <span>Mountain Oasis</span>
-          <strong>Direct booking request</strong>
-          <p>Send your dates and guest count. Availability should be confirmed against Airbnb and Vrbo calendars before payment.</p>
+          <span>Cabin 406</span>
+          <strong>Pool, spa, games, decks</strong>
+          <p>Book direct after Airbnb and Vrbo availability is verified.</p>
         </aside>
+      </section>
+
+      <section class="photo-strip" aria-label="Property preview">
+        <img src="assets/media/indoor-pool.jpg" alt="Indoor pool room with colorful mountain mural" />
+        <img src="assets/media/kitchen-great-room.jpg" alt="Open cabin kitchen and great room with green cabinets" />
+        <img src="assets/media/hot-tub.jpg" alt="Covered deck hot tub with cabin views" />
+        <img src="assets/media/game-loft.jpg" alt="Game loft with arcade cabinets and lounge seating" />
       </section>
 
       <section class="intro" id="stay">
         <div>
-          <p class="eyebrow">Designed for reset</p>
-          <h2>Cabin comfort with boutique-hotel polish.</h2>
+          <p class="eyebrow">A real mountain basecamp</p>
+          <h2>Rustic outside. Polished, playful, and fully loaded inside.</h2>
         </div>
         <p>
-          Five Elements Smoky is built around the feeling of arriving somewhere quiet and immediately
-          exhaling. The brand is rustic, clean, and grounded: pine green, river mint, slate blue, earth
-          brown, warm off-white, and a little hearth gold where the light belongs.
+          Five Elements Smoky blends warm log-cabin character with the amenities people actually
+          travel for: private water time, a sauna reset, big shared spaces, kid-friendly rooms,
+          arcade nights, coffee-ready mornings, and a porch that does not rush you.
         </p>
       </section>
 
-      <section class="feature-grid" aria-label="Rental highlights">
+      <section class="stats" aria-label="Stay highlights">
+        <div><span>Private</span><strong>Indoor pool</strong></div>
+        <div><span>Outdoor</span><strong>Hot tub + decks</strong></div>
+        <div><span>Wellness</span><strong>Sauna lounge</strong></div>
+        <div><span>Family</span><strong>Game loft + bunk room</strong></div>
+      </section>
+
+      <section class="feature-grid" id="amenities" aria-label="Rental highlights">
         <article>
-          <span class="feature-icon">01</span>
-          <h3>Mountain Mornings</h3>
-          <p>Coffee, ridgeline light, and an easy basecamp for hikes, overlooks, and town days.</p>
+          <img src="assets/media/sauna-lounge.jpg" alt="Sauna and lounge area beside the indoor pool" />
+          <div>
+            <span class="feature-icon">Water</span>
+            <h3>Private indoor pool</h3>
+            <p>Swim, lounge, play pool basketball, then step into the sauna room without leaving the cabin.</p>
+          </div>
         </article>
         <article>
-          <span class="feature-icon">02</span>
-          <h3>Firelit Evenings</h3>
-          <p>Warm interiors, cozy gathering zones, and a stay that feels considered after sunset.</p>
+          <img src="assets/media/porch-fire.jpg" alt="Covered porch seating with a tabletop fire feature" />
+          <div>
+            <span class="feature-icon">Fire</span>
+            <h3>Porch nights</h3>
+            <p>Covered outdoor seating, a grill, hot tub, and fire-table glow make evenings feel easy.</p>
+          </div>
         </article>
         <article>
-          <span class="feature-icon">03</span>
-          <h3>Direct Savings</h3>
-          <p>Book directly after availability is verified and skip the extra marketplace layer.</p>
+          <img src="assets/media/living-fireplace.jpg" alt="Cabin living room with stone fireplace and mountain decor" />
+          <div>
+            <span class="feature-icon">Wood</span>
+            <h3>Gathering spaces</h3>
+            <p>High ceilings, cabin woodwork, a stone fireplace, and a full kitchen keep everyone connected.</p>
+          </div>
         </article>
       </section>
 
-      <section class="showcase" aria-label="Five Elements experience">
+      <section class="showcase" aria-label="Direct booking experience">
         <div class="showcase-copy">
           <p class="eyebrow">The five elements</p>
-          <h2>A stay organized around what people come to the mountains to feel.</h2>
+          <h2>A stay with enough room for every kind of vacation mood.</h2>
           <p>
-            Earth for grounding, water for calm, wood for warmth, fire for gathering, and air for that
-            clean Smoky Mountain breath before the day begins.
+            Slow mornings in the kitchen, splash-heavy afternoons, porch dinners, arcade breaks,
+            and quiet reset time all fit under one roof.
           </p>
         </div>
-        <div class="element-list" id="elements">
-          <div><span>Earth</span><strong>Natural textures and anchored spaces</strong></div>
-          <div><span>Water</span><strong>Creek-inspired calm and softened edges</strong></div>
-          <div><span>Wood</span><strong>Cabin character without clutter</strong></div>
-          <div><span>Fire</span><strong>Warm light, gathering, and golden details</strong></div>
-          <div><span>Air</span><strong>Open views, fresh mornings, and quiet</strong></div>
+        <div class="element-list">
+          <div><span>Earth</span><strong>Log cabin warmth, mountain setting, grounded interiors</strong></div>
+          <div><span>Water</span><strong>Indoor pool, hot tub, fresh towels, playful pool room</strong></div>
+          <div><span>Fire</span><strong>Fireplace, fire table, grill, golden cabin lighting</strong></div>
+          <div><span>Air</span><strong>Covered decks, aerial views, open great-room ceiling</strong></div>
+          <div><span>Wood</span><strong>Sauna, loft, arcade corner, cabin-crafted details</strong></div>
+        </div>
+      </section>
+
+      <section class="gallery-section" id="gallery" aria-label="Cabin photo gallery">
+        <div class="section-heading">
+          <p class="eyebrow">The real house</p>
+          <h2>Photos that book the stay.</h2>
+        </div>
+        <div class="gallery-grid">
+          <figure class="wide">
+            <img src="assets/media/aerial-sunset.jpg" alt="Aerial sunset view of the cabin community near the mountains" />
+            <figcaption>Minutes from town energy, tucked against the Smokies.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/media/king-suite-green.jpg" alt="King bedroom with pine walls and green mountain mural" />
+            <figcaption>Soft suites with warm wood and mountain tones.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/media/double-queen-room.jpg" alt="Bedroom with two beds and vaulted wood ceiling" />
+            <figcaption>Room for families and groups to spread out.</figcaption>
+          </figure>
+          <figure class="tall">
+            <img src="assets/media/bunk-room.jpg" alt="Kids bunk room with colorful camp mural" />
+            <figcaption>A camp-themed bunk room with its own personality.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/media/covered-deck.jpg" alt="Covered deck with lounge chairs and grill area" />
+            <figcaption>Covered deck space for coffee, grilling, and hanging out.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/media/ev-charger.jpg" alt="EV charger mounted on log cabin wall" />
+            <figcaption>EV charging for road-trip convenience.</figcaption>
+          </figure>
+          <figure class="wide">
+            <img src="assets/media/mountain-aerial.jpg" alt="Wide aerial mountain view above the cabin community" />
+            <figcaption>Smoky Mountain scale, with the cabin close to everything.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/media/grill-deck.jpg" alt="Covered porch with grill and hanging chair" />
+            <figcaption>Grill nights and easy porch downtime.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/media/welcome-snacks.jpg" alt="Welcome snack bowl and sparkling water on the coffee table" />
+            <figcaption>Small arrival touches make the first five minutes better.</figcaption>
+          </figure>
         </div>
       </section>
 
@@ -110,12 +188,11 @@
           <p class="eyebrow">Book direct</p>
           <h2>Request your dates.</h2>
           <p>
-            This form is ready for a direct-booking workflow. The calendar below uses local sample
-            availability today; the next step is connecting Airbnb and Vrbo iCal feeds so blocked dates
-            update automatically.
+            Send your trip dates and guest count here. Before taking payment, availability should be
+            checked against the Airbnb and Vrbo calendars so guests can only book open nights.
           </p>
           <div class="trust-row" aria-label="Booking benefits">
-            <span>No platform markup</span>
+            <span>No marketplace layer</span>
             <span>Calendar-verified dates</span>
             <span>Owner-direct support</span>
           </div>
@@ -137,6 +214,8 @@
               <option value="4">4 guests</option>
               <option value="6">6 guests</option>
               <option value="8">8 guests</option>
+              <option value="10">10 guests</option>
+              <option value="12">12 guests</option>
             </select>
           </label>
           <label>
