@@ -21,10 +21,28 @@ const arrivalInput = document.querySelector("#arrival");
 const departureInput = document.querySelector("#departure");
 const form = document.querySelector(".booking-form");
 const formNote = document.querySelector("[data-form-note]");
+const heroVideo = document.querySelector(".hero-media");
 
 const today = new Date();
 let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 let selectedDates = [];
+
+if (heroVideo) {
+  const startTime = Number(heroVideo.dataset.startTime || 0);
+
+  const skipOpeningTitle = () => {
+    if (startTime > 0 && heroVideo.currentTime < startTime) {
+      heroVideo.currentTime = startTime;
+    }
+  };
+
+  heroVideo.addEventListener("loadedmetadata", skipOpeningTitle);
+  heroVideo.addEventListener("timeupdate", () => {
+    if (startTime > 0 && heroVideo.currentTime < startTime - 0.25) {
+      skipOpeningTitle();
+    }
+  });
+}
 
 function toDateKey(date) {
   const year = date.getFullYear();
