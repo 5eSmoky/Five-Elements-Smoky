@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Five Elements Smoky is a mountain oasis short-term rental designed for direct bookings in the Smoky Mountains."
+    />
+    <title>Five Elements Smoky | Mountain Oasis</title>
+    <link rel="icon" type="image/png" href="assets/logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header" data-header>
+      <a class="brand" href="#top" aria-label="Five Elements Smoky home">
+        <img src="assets/logo.png" alt="" />
+        <span>
+          <strong>Five Elements Smoky</strong>
+          <small>Mountain Oasis</small>
+        </span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#stay">Stay</a>
+        <a href="#calendar">Calendar</a>
+        <a href="#elements">Elements</a>
+        <a href="#book">Book Direct</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-label="Five Elements Smoky cabin">
+        <img class="hero-image" src="assets/smoky-hero.png" alt="Cabin tucked into misty mountain ridges at golden hour" />
+        <div class="hero-scrim"></div>
+        <div class="hero-content">
+          <p class="eyebrow">Private Smoky Mountain stay</p>
+          <h1>Five Elements Smoky</h1>
+          <p class="hero-copy">
+            A warm, design-forward mountain oasis for slow mornings, creekside air, firelit evenings,
+            and direct-booked escapes without marketplace fees.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#book">Check Dates</a>
+            <a class="button secondary" href="#stay">Explore The House</a>
+          </div>
+        </div>
+        <aside class="quick-card" aria-label="Stay summary">
+          <span>Mountain Oasis</span>
+          <strong>Direct booking request</strong>
+          <p>Send your dates and guest count. Availability should be confirmed against Airbnb and Vrbo calendars before payment.</p>
+        </aside>
+      </section>
+
+      <section class="intro" id="stay">
+        <div>
+          <p class="eyebrow">Designed for reset</p>
+          <h2>Cabin comfort with boutique-hotel polish.</h2>
+        </div>
+        <p>
+          Five Elements Smoky is built around the feeling of arriving somewhere quiet and immediately
+          exhaling. The brand is rustic, clean, and grounded: pine green, river mint, slate blue, earth
+          brown, warm off-white, and a little hearth gold where the light belongs.
+        </p>
+      </section>
+
+      <section class="feature-grid" aria-label="Rental highlights">
+        <article>
+          <span class="feature-icon">01</span>
+          <h3>Mountain Mornings</h3>
+          <p>Coffee, ridgeline light, and an easy basecamp for hikes, overlooks, and town days.</p>
+        </article>
+        <article>
+          <span class="feature-icon">02</span>
+          <h3>Firelit Evenings</h3>
+          <p>Warm interiors, cozy gathering zones, and a stay that feels considered after sunset.</p>
+        </article>
+        <article>
+          <span class="feature-icon">03</span>
+          <h3>Direct Savings</h3>
+          <p>Book directly after availability is verified and skip the extra marketplace layer.</p>
+        </article>
+      </section>
+
+      <section class="showcase" aria-label="Five Elements experience">
+        <div class="showcase-copy">
+          <p class="eyebrow">The five elements</p>
+          <h2>A stay organized around what people come to the mountains to feel.</h2>
+          <p>
+            Earth for grounding, water for calm, wood for warmth, fire for gathering, and air for that
+            clean Smoky Mountain breath before the day begins.
+          </p>
+        </div>
+        <div class="element-list" id="elements">
+          <div><span>Earth</span><strong>Natural textures and anchored spaces</strong></div>
+          <div><span>Water</span><strong>Creek-inspired calm and softened edges</strong></div>
+          <div><span>Wood</span><strong>Cabin character without clutter</strong></div>
+          <div><span>Fire</span><strong>Warm light, gathering, and golden details</strong></div>
+          <div><span>Air</span><strong>Open views, fresh mornings, and quiet</strong></div>
+        </div>
+      </section>
+
+      <section class="booking-band" id="book">
+        <div class="booking-copy">
+          <p class="eyebrow">Book direct</p>
+          <h2>Request your dates.</h2>
+          <p>
+            This form is ready for a direct-booking workflow. The calendar below uses local sample
+            availability today; the next step is connecting Airbnb and Vrbo iCal feeds so blocked dates
+            update automatically.
+          </p>
+          <div class="trust-row" aria-label="Booking benefits">
+            <span>No platform markup</span>
+            <span>Calendar-verified dates</span>
+            <span>Owner-direct support</span>
+          </div>
+        </div>
+
+        <form class="booking-form" aria-label="Direct booking request">
+          <label>
+            Arrival
+            <input id="arrival" type="date" name="arrival" required />
+          </label>
+          <label>
+            Departure
+            <input id="departure" type="date" name="departure" required />
+          </label>
+          <label>
+            Guests
+            <select name="guests" required>
+              <option value="2">2 guests</option>
+              <option value="4">4 guests</option>
+              <option value="6">6 guests</option>
+              <option value="8">8 guests</option>
+            </select>
+          </label>
+          <label>
+            Email
+            <input type="email" name="email" placeholder="you@example.com" required />
+          </label>
+          <label class="full">
+            Anything we should know?
+            <textarea name="message" rows="4" placeholder="Occasion, questions, flexible dates..."></textarea>
+          </label>
+          <button class="button primary full" type="submit">Send Booking Request</button>
+          <p class="form-note" data-form-note>Requests are reviewed against Airbnb and Vrbo availability before confirmation.</p>
+        </form>
+      </section>
+
+      <section class="calendar-section" id="calendar" aria-label="Availability calendar">
+        <div class="calendar-heading">
+          <div>
+            <p class="eyebrow">Availability</p>
+            <h2>Choose open nights only.</h2>
+          </div>
+          <div class="calendar-controls">
+            <button type="button" class="icon-button" data-prev-month aria-label="Previous month">‹</button>
+            <strong data-month-label></strong>
+            <button type="button" class="icon-button" data-next-month aria-label="Next month">›</button>
+          </div>
+        </div>
+        <div class="calendar-shell">
+          <div class="calendar-grid weekdays" aria-hidden="true">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div class="calendar-grid days" data-calendar-days></div>
+        </div>
+        <div class="calendar-legend">
+          <span><i class="available"></i>Available</span>
+          <span><i class="blocked"></i>Unavailable</span>
+          <span><i class="selected"></i>Selected</span>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <img src="assets/logo.png" alt="" />
+      <div>
+        <strong>Five Elements Smoky</strong>
+        <p>Mountain Oasis for direct-booked Smoky Mountain stays.</p>
+      </div>
+      <a href="mailto:hello@fiveelementssmoky.com">hello@fiveelementssmoky.com</a>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
