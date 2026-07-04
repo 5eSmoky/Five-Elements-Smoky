@@ -31,7 +31,6 @@
         <a href="#amenities">Amenities</a>
         <a href="#gallery">Gallery</a>
         <a href="#calendar">Calendar</a>
-        <a href="#book">Book Direct</a>
       </nav>
     </header>
 
@@ -43,7 +42,7 @@
           muted
           loop
           playsinline
-          data-start-time="5"
+          data-start-time="6.5"
           poster="assets/media/cabin-twilight.jpg"
         >
           <source src="assets/media/cinematic-tour.mp4" type="video/mp4" />
@@ -57,7 +56,7 @@
             covered decks, and warm cabin spaces made for families and group escapes.
           </p>
           <div class="hero-actions">
-            <a class="button primary" href="#book">Check Dates</a>
+            <a class="button primary" href="#calendar">Check Dates</a>
             <a class="button secondary" href="#gallery">View Photos</a>
           </div>
         </div>
@@ -184,54 +183,6 @@
         </div>
       </section>
 
-      <section class="booking-band" id="book">
-        <div class="booking-copy">
-          <p class="eyebrow">Book direct</p>
-          <h2>Request your dates.</h2>
-          <p>
-            Send your trip dates and guest count here. Before taking payment, availability should be
-            checked against the Airbnb and Vrbo calendars so guests can only book open nights.
-          </p>
-          <div class="trust-row" aria-label="Booking benefits">
-            <span>No marketplace layer</span>
-            <span>Calendar-verified dates</span>
-            <span>Owner-direct support</span>
-          </div>
-        </div>
-
-        <form class="booking-form" aria-label="Direct booking request">
-          <label>
-            Arrival
-            <input id="arrival" type="date" name="arrival" required />
-          </label>
-          <label>
-            Departure
-            <input id="departure" type="date" name="departure" required />
-          </label>
-          <label>
-            Guests
-            <select name="guests" required>
-              <option value="2">2 guests</option>
-              <option value="4">4 guests</option>
-              <option value="6">6 guests</option>
-              <option value="8">8 guests</option>
-              <option value="10">10 guests</option>
-              <option value="12">12 guests</option>
-            </select>
-          </label>
-          <label>
-            Email
-            <input type="email" name="email" placeholder="you@example.com" required />
-          </label>
-          <label class="full">
-            Anything we should know?
-            <textarea name="message" rows="4" placeholder="Occasion, questions, flexible dates..."></textarea>
-          </label>
-          <button class="button primary full" type="submit">Send Booking Request</button>
-          <p class="form-note" data-form-note>Requests are reviewed against Airbnb and Vrbo availability before confirmation.</p>
-        </form>
-      </section>
-
       <section class="calendar-section" id="calendar" aria-label="Availability calendar">
         <div class="calendar-heading">
           <div>
@@ -255,6 +206,96 @@
           <span><i class="blocked"></i>Unavailable</span>
           <span><i class="selected"></i>Selected</span>
         </div>
+        <p class="calendar-status" data-calendar-status>Preparing availability calendar...</p>
+        <div class="booking-request-panel" data-booking-panel hidden>
+          <div class="booking-request-copy">
+            <p class="eyebrow">Request stay</p>
+            <h3 data-selected-range>Selected dates</h3>
+            <div class="price-summary" data-selected-price>Nightly estimate appears after dates are selected.</div>
+            <p>Send the request and we will confirm only after owner approval.</p>
+          </div>
+          <form class="booking-form" aria-label="Direct booking request">
+            <label>
+              Arrival
+              <input id="arrival" type="date" name="arrival" readonly required />
+            </label>
+            <label>
+              Departure
+              <input id="departure" type="date" name="departure" readonly required />
+            </label>
+            <fieldset class="guest-grid full">
+              <legend>Guests (12 max)</legend>
+              <label>
+                Adults (17+)
+                <select name="adults" data-guest-count required>
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2" selected>2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </label>
+              <label>
+                Teens (13-17)
+                <select name="teens" data-guest-count required>
+                  <option value="0" selected>0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </label>
+              <label>
+                Children (12 and under)
+                <select name="children" data-guest-count required>
+                  <option value="0" selected>0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </label>
+            </fieldset>
+            <label class="checkbox-label full">
+              <input type="checkbox" name="pets" value="yes" data-pet-field />
+              Bringing a pet ($150 fee)
+            </label>
+            <label>
+              Email
+              <input type="email" name="email" placeholder="you@example.com" required />
+            </label>
+            <label class="full">
+              Anything we should know?
+              <textarea name="message" rows="4" placeholder="Occasion, questions, flexible dates..."></textarea>
+            </label>
+            <button class="button primary full" type="submit">Continue to Secure Checkout</button>
+            <p class="form-note" data-form-note>Checkout is handled securely by Stripe. Dates are blocked after payment and owner confirmation.</p>
+          </form>
+        </div>
       </section>
     </main>
 
@@ -267,6 +308,8 @@
       <a href="mailto:hello@fiveelementssmoky.com">hello@fiveelementssmoky.com</a>
     </footer>
 
+    <script src="calendar-config.js"></script>
+    <script src="price-calendar.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

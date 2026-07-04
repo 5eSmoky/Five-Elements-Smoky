@@ -283,7 +283,6 @@ h3 {
 .feature-grid,
 .showcase,
 .gallery-section,
-.booking-band,
 .calendar-section,
 footer {
   width: min(1160px, calc(100% - 32px));
@@ -314,7 +313,7 @@ footer {
 }
 
 .intro .eyebrow,
-.booking-copy .eyebrow,
+.booking-request-copy .eyebrow,
 .calendar-heading .eyebrow,
 .showcase .eyebrow,
 .section-heading .eyebrow {
@@ -323,7 +322,7 @@ footer {
 
 .intro p,
 .showcase-copy p,
-.booking-copy p {
+.booking-request-copy p {
   color: var(--muted);
   font-size: 1.05rem;
   line-height: 1.75;
@@ -469,30 +468,6 @@ figcaption {
   line-height: 1.35;
 }
 
-.booking-band {
-  display: grid;
-  grid-template-columns: 0.92fr 1.08fr;
-  gap: 34px;
-  align-items: start;
-  padding: 88px 0 52px;
-}
-
-.trust-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 28px;
-}
-
-.trust-row span {
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--pine-dark);
-  font-size: 0.85rem;
-  font-weight: 900;
-}
-
 .booking-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -511,6 +486,45 @@ label {
   font-size: 0.82rem;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.guest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.guest-grid legend {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  color: var(--pine-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.guest-grid label {
+  min-width: 0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px;
+  border: 1px solid rgba(47, 89, 60, 0.24);
+  border-radius: 6px;
+  background: #fffdf5;
+}
+
+.checkbox-label input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }
 
 input,
@@ -610,13 +624,30 @@ textarea {
 }
 
 .day {
+  display: grid;
+  align-content: center;
+  place-items: center;
+  gap: 3px;
   min-height: 58px;
+  padding: 8px 4px;
   border: 1px solid rgba(47, 89, 60, 0.14);
   border-radius: 8px;
   background: rgba(255, 253, 245, 0.9);
   color: var(--ink);
   font-weight: 800;
+  line-height: 1;
   aspect-ratio: 1.2 / 1;
+}
+
+.day-number {
+  font-size: 0.95rem;
+}
+
+.day-price {
+  color: var(--pine);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-decoration: none;
 }
 
 .day:not(.empty):not(.blocked) {
@@ -634,9 +665,17 @@ textarea {
   text-decoration: line-through;
 }
 
+.day.blocked .day-price {
+  color: inherit;
+}
+
 .day.selected {
   border-color: var(--pine-dark);
   background: var(--pine);
+  color: var(--cream);
+}
+
+.day.selected .day-price {
   color: var(--cream);
 }
 
@@ -672,6 +711,76 @@ textarea {
 
 .calendar-legend .selected {
   background: var(--pine);
+}
+
+.calendar-status {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.calendar-status[data-tone="success"] {
+  color: var(--pine-dark);
+}
+
+.calendar-status[data-tone="warning"] {
+  color: var(--earth);
+}
+
+.booking-request-panel {
+  display: grid;
+  grid-template-columns: 0.72fr 1.28fr;
+  gap: 24px;
+  align-items: start;
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(165, 188, 178, 0.22);
+}
+
+.booking-request-panel[hidden] {
+  display: none;
+}
+
+.booking-request-copy h3 {
+  margin: 0 0 10px;
+  color: var(--pine-dark);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(1.65rem, 3vw, 2.55rem);
+  line-height: 1;
+}
+
+.price-summary {
+  margin: 0 0 12px;
+  color: var(--pine);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.price-breakdown {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.price-breakdown dt,
+.price-breakdown dd {
+  margin: 0;
+}
+
+.price-breakdown dd {
+  text-align: right;
+}
+
+.price-breakdown .price-total {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--pine-dark);
 }
 
 footer {
@@ -743,7 +852,7 @@ footer a {
 
   .intro,
   .showcase,
-  .booking-band {
+  .booking-request-panel {
     grid-template-columns: 1fr;
   }
 
@@ -782,7 +891,8 @@ footer a {
   .stats,
   .feature-grid,
   .gallery-grid,
-  .booking-form {
+  .booking-form,
+  .guest-grid {
     grid-template-columns: 1fr;
   }
 
@@ -806,9 +916,18 @@ footer a {
     gap: 6px;
   }
 
+  .booking-request-panel {
+    padding: 16px;
+  }
+
   .day {
     min-height: 42px;
+    padding: 5px 2px;
     font-size: 0.82rem;
+  }
+
+  .day-price {
+    font-size: 0.62rem;
   }
 
   footer {
