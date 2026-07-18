@@ -16,6 +16,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   </head>
   <body>
     <header class="site-header" data-header>
@@ -212,7 +213,7 @@
             <p class="eyebrow">Request stay</p>
             <h3 data-selected-range>Selected dates</h3>
             <div class="price-summary" data-selected-price>Nightly estimate appears after dates are selected.</div>
-            <p>Send the request and we will confirm only after owner approval.</p>
+            <p>Verify the lead guest, then send a request for owner approval. No payment is taken until approval.</p>
           </div>
           <form class="booking-form" aria-label="Direct booking request">
             <label>
@@ -285,15 +286,29 @@
               Bringing a pet ($150 fee)
             </label>
             <label>
+              Lead guest's legal name
+              <input type="text" name="guestName" autocomplete="name" maxlength="120" required />
+            </label>
+            <label>
               Email
-              <input type="email" name="email" placeholder="you@example.com" required />
+              <input type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+            </label>
+            <label>
+              Mobile phone
+              <input type="tel" name="phone" autocomplete="tel" placeholder="(555) 555-5555" maxlength="40" required />
             </label>
             <label class="full">
               Anything we should know?
               <textarea name="message" rows="4" placeholder="Occasion, questions, flexible dates..."></textarea>
             </label>
-            <button class="button primary full" type="submit">Continue to Secure Checkout</button>
-            <p class="form-note" data-form-note>3-night minimum. Checkout is handled securely by Stripe.</p>
+            <label class="checkbox-label full screening-consent">
+              <input type="checkbox" name="screeningConsent" required />
+              I consent to lead-guest identity verification and screening by Truvi and understand that approval is not guaranteed.
+            </label>
+            <p class="privacy-note full">Truvi securely handles the identity document and selfie. Five Elements Smoky stores the verification result, not a copy of the ID.</p>
+            <div class="cf-turnstile full" data-turnstile-container></div>
+            <button class="button primary full" type="submit">Verify Identity &amp; Request Stay</button>
+            <p class="form-note" data-form-note>3-night minimum. Verification is required before the owner receives your request.</p>
           </form>
         </div>
       </section>

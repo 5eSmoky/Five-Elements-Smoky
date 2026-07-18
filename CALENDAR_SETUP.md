@@ -1,4 +1,6 @@
-# Five Elements Smoky Calendar Setup
+# Five Elements Smoky Calendar Setup (Legacy Reference)
+
+> The live direct-booking setup has moved to the verified, approval-first workflow in [`backend/README.md`](backend/README.md). Do not deploy the pay-first Stripe Checkout flow described later in this legacy document.
 
 This setup uses one inbound calendar and one outbound calendar:
 

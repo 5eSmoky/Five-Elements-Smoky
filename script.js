@@ -32,6 +32,7 @@ const selectedRangeLabel = document.querySelector("[data-selected-range]");
 const selectedPriceLabel = document.querySelector("[data-selected-price]");
 const guestCountFields = document.querySelectorAll("[data-guest-count]");
 const petField = document.querySelector("[data-pet-field]");
+const turnstileContainer = document.querySelector("[data-turnstile-container]");
 const heroVideo = document.querySelector(".hero-media");
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -371,7 +372,8 @@ function syncCalendarToInput() {
 }
 
 async function loadAvailability() {
-  if (!calendarConfig.apiUrl || calendarConfig.apiUrl.includes("PASTE_")) {
+  const availabilityUrl = calendarConfig.availabilityUrl || calendarConfig.apiUrl;
+  if (!availabilityUrl || availabilityUrl.includes("PASTE_")) {
     console.debug("Availability calendar is not configured.");
     setCalendarStatus("Calendar is temporarily unavailable. Please email us for availability.", "warning");
     renderCalendar();
@@ -382,7 +384,7 @@ async function loadAvailability() {
   setCalendarStatus("Loading calendar...");
 
   try {
-    const response = await fetch(`${calendarConfig.apiUrl}?action=availability`, {
+    const response = await fetch(`${availabilityUrl}?action=availability`, {
       method: "GET",
       cache: "no-store",
     });
@@ -412,49 +414,32 @@ async function loadAvailability() {
 
 async function sendBookingRequest(formData) {
   const guestCounts = getGuestCounts(formData);
-  const quote = getRangeQuote(formData.get("arrival"), formData.get("departure"), {
-    includesPet: hasPetSelected(formData),
-  });
-  const estimatedPriceLines = quote.missingNights ? [] : getQuoteLineItems(quote).map((line) => ({
-    label: line.label,
-    value: line.value,
-  }));
 
-  const response = await fetch(calendarConfig.apiUrl, {
+  const response = await fetch(`${calendarConfig.bookingApiUrl.replace(/\/$/, "")}/requests`, {
     method: "POST",
     headers: {
-      "Content-Type": "text/plain;charset=utf-8",
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      action: "createCheckoutSession",
       arrival: formData.get("arrival"),
       departure: formData.get("departure"),
+      guestName: formData.get("guestName"),
       adults: guestCounts.adults,
       teens: guestCounts.teens,
       children: guestCounts.children,
       guests: guestCounts.total,
       pets: hasPetSelected(formData),
       email: formData.get("email"),
+      phone: formData.get("phone"),
       message: formData.get("message"),
-      estimatedNights: quote.nights.length,
-      estimatedNightlySubtotal: quote.missingNights ? null : quote.nightlySubtotal,
-      cleaningFee: quote.cleaningFee,
-      petFee: quote.petFee,
-      estimatedTaxRate: STR_TAX_RATE,
-      estimatedTaxAmount: quote.missingNights ? null : quote.taxAmount,
-      estimatedSubtotal: quote.missingNights ? null : quote.taxableSubtotal,
-      estimatedTotal: quote.missingNights ? null : quote.finalTotal,
-      estimatedMissingRates: quote.missingNights,
-      estimatedPriceLines,
-      pageUrl: window.location.href.split("#")[0].split("?")[0],
+      screeningConsent: formData.get("screeningConsent") === "on",
+      turnstileToken: formData.get("cf-turnstile-response"),
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Booking request failed with ${response.status}`);
-  }
-
-  return response.json();
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, message: result.message || "The secure booking request could not be started." };
+  return result;
 }
 
 prevButton.addEventListener("click", () => {
@@ -511,14 +496,14 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (!calendarConfig.apiUrl || calendarConfig.apiUrl.includes("PASTE_")) {
-    formNote.textContent = "Calendar connection is not configured yet. Paste your Apps Script URL into calendar-config.js.";
+  if (!calendarConfig.bookingApiUrl || calendarConfig.bookingApiUrl.includes("PASTE_")) {
+    formNote.textContent = "Secure booking requests are being configured. Please email us for now.";
     return;
   }
 
   formNote.textContent = availabilityLoaded
-    ? "Rechecking availability and preparing secure checkout..."
-    : "Checking availability and preparing secure checkout...";
+    ? "Rechecking availability and starting secure verification..."
+    : "Checking availability and starting secure verification...";
 
   try {
     const result = await sendBookingRequest(formData);
@@ -529,9 +514,9 @@ form.addEventListener("submit", async (event) => {
       return;
     }
 
-    if (result.checkoutUrl) {
-      formNote.textContent = "Redirecting to Stripe secure checkout...";
-      window.location.assign(result.checkoutUrl);
+    if (result.verificationUrl) {
+      formNote.textContent = "Redirecting to Truvi secure identity verification...";
+      window.location.assign(result.verificationUrl);
       return;
     }
 
@@ -539,12 +524,21 @@ form.addEventListener("submit", async (event) => {
     selectedDates = [];
     renderCalendar();
     updateBookingRequestPanel();
-    setCalendarStatus("Request received. Dates stay available until checkout is completed.", "success");
-    formNote.textContent = "Request received. We will email you after the owner approves or declines the stay.";
+    setCalendarStatus("Verification received. Dates remain available until payment is completed.", "success");
+    formNote.textContent = "Verification received. We will email you after the owner approves or declines the request.";
   } catch (error) {
-    formNote.textContent = "Something went wrong while preparing checkout. Please try again or email us directly.";
+    formNote.textContent = "Something went wrong while starting verification. Please try again or email us directly.";
   }
 });
+
+function renderTurnstile() {
+  if (!turnstileContainer || !window.turnstile || !calendarConfig.turnstileSiteKey || calendarConfig.turnstileSiteKey.includes("PASTE_")) return;
+  if (turnstileContainer.dataset.rendered) return;
+  window.turnstile.render(turnstileContainer, { sitekey: calendarConfig.turnstileSiteKey, theme: "light" });
+  turnstileContainer.dataset.rendered = "true";
+}
+
+window.addEventListener("load", renderTurnstile);
 
 renderCalendar();
 loadAvailability().then(showCheckoutReturnStatus);

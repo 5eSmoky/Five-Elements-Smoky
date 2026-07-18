@@ -1,0 +1,26 @@
+name = "five-elements-bookings"
+main = "src/worker.js"
+compatibility_date = "2026-07-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "five-elements-bookings"
+database_id = "PASTE_D1_DATABASE_ID"
+
+[vars]
+ALLOWED_ORIGIN = "https://5esmoky.github.io"
+SITE_URL = "https://5esmoky.github.io/home/"
+PUBLIC_API_URL = "PASTE_CLOUDFLARE_WORKER_URL_HERE"
+PRICE_CALENDAR_URL = "https://5esmoky.github.io/home/price-calendar.js"
+OWNER_EMAIL = "fiveelementssmoky@gmail.com"
+FROM_EMAIL = "Five Elements Smoky <bookings@PASTE_VERIFIED_DOMAIN>"
+MIN_NIGHTS = "3"
+CLEANING_FEE_CENTS = "45000"
+PET_FEE_CENTS = "15000"
+STR_TAX_RATE = "0.1275"
+PAYMENT_WINDOW_HOURS = "24"
+
+# Add secrets with `wrangler secret put NAME`:
+# STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY,
+# TURNSTILE_SECRET_KEY, TRUVI_API_KEY, TRUVI_CREATE_BOOKING_URL,
+# TRUVI_WEBHOOK_SECRET, CALENDAR_API_URL, CALENDAR_COMMAND_TOKEN.
