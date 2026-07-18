@@ -63,6 +63,35 @@ async function createRequest(request, env) {
       booking.email, booking.phone, booking.adults, booking.teens, booking.children, booking.guests,
       booking.pets ? 1 : 0, booking.message, quoteCents, "pending").run();
 
+  const verificationMode = env.VERIFICATION_MODE || "disabled";
+  if (verificationMode === "disabled") {
+    const token = randomToken();
+    const expires = new Date(Date.now() + 48 * 3600000).toISOString();
+    await env.DB.prepare("UPDATE booking_requests SET status='owner_review',verification_status='not_enabled',owner_token_hash=?,owner_token_expires_at=?,updated_at=? WHERE id=?")
+      .bind(await sha256(token), expires, now, id).run();
+    const unverifiedBooking = {
+      ...booking,
+      guest_name: booking.guestName,
+      quote_cents: booking.quoteCents,
+      verification_status: "not_enabled",
+      verification_report_url: "",
+    };
+    try {
+      await sendOwnerReviewEmail(unverifiedBooking, token, env);
+    } catch (error) {
+      await env.DB.prepare("UPDATE booking_requests SET status='notification_error',last_error=?,updated_at=? WHERE id=?")
+        .bind(String(error.message || error), new Date().toISOString(), id).run();
+      throw error;
+    }
+    await sendEmail(booking.email, "Stay request received", `Thanks, ${booking.guestName}. Your request is awaiting owner review. No payment has been taken.`, env)
+      .catch((error) => console.error("Guest request email failed", error));
+    return json({ ok: true, requestId: id, message: "Request sent for owner review." });
+  }
+
+  if (verificationMode !== "truvi") {
+    throw new Error("VERIFICATION_MODE must be either disabled or truvi.");
+  }
+
   try {
     const verification = await createTruviBooking(env, booking);
     await env.DB.prepare(`UPDATE booking_requests SET verification_id=?,verification_url=?,verification_report_url=?,verification_status=?,updated_at=? WHERE id=?`)
@@ -93,16 +122,26 @@ async function handleTruviWebhook(request, env) {
   await env.DB.prepare("UPDATE booking_requests SET verification_status=?,verification_report_url=COALESCE(NULLIF(?,''),verification_report_url),updated_at=? WHERE id=?")
     .bind(event.status, event.reportUrl, now, booking.id).run();
 
-  if (["approved", "flagged"].includes(event.status) && booking.status === "verification_pending") {
+  if (["approved", "flagged"].includes(event.status) && ["verification_pending", "owner_review"].includes(booking.status)) {
     const token = randomToken();
     const expires = new Date(Date.now() + 48 * 3600000).toISOString();
     await env.DB.prepare("UPDATE booking_requests SET status='owner_review',owner_token_hash=?,owner_token_expires_at=?,updated_at=? WHERE id=?")
       .bind(await sha256(token), expires, now, booking.id).run();
-    await sendOwnerReviewEmail({ ...booking, verification_status: event.status, verification_report_url: event.reportUrl }, token, env);
-    await sendEmail(booking.email, "Identity verification received", `Thanks, ${booking.guest_name}. Your verified request is now awaiting owner review. No payment has been taken.`, env);
+    try {
+      await sendOwnerReviewEmail({ ...booking, verification_status: event.status, verification_report_url: event.reportUrl }, token, env);
+      await sendEmail(booking.email, "Identity verification received", `Thanks, ${booking.guest_name}. Your verified request is now awaiting owner review. No payment has been taken.`, env);
+    } catch (error) {
+      await forgetEvent(env, "truvi", event.eventId);
+      throw error;
+    }
   } else if (event.status === "rejected") {
     await env.DB.prepare("UPDATE booking_requests SET status='verification_rejected',updated_at=? WHERE id=?").bind(now, booking.id).run();
-    await sendEmail(booking.email, "Unable to submit your stay request", "We could not complete the required guest verification, so the stay request was not sent for approval. No payment has been taken.", env);
+    try {
+      await sendEmail(booking.email, "Unable to submit your stay request", "We could not complete the required guest verification, so the stay request was not sent for approval. No payment has been taken.", env);
+    } catch (error) {
+      await forgetEvent(env, "truvi", event.eventId);
+      throw error;
+    }
   }
   return json({ ok: true });
 }
@@ -111,7 +150,8 @@ async function showOwnerReview(url, env) {
   const booking = await authorizedOwnerBooking(url.searchParams.get("id"), url.searchParams.get("token"), env);
   if (!booking) return html("<h1>This review link is invalid or expired.</h1>", 403);
   const report = booking.verification_report_url ? `<p><a href="${escapeHtml(booking.verification_report_url)}" rel="noreferrer">Open Truvi report</a></p>` : "";
-  return html(`<!doctype html><meta name="viewport" content="width=device-width"><title>Review booking</title><style>body{font:16px system-ui;max-width:680px;margin:40px auto;padding:20px;color:#17352d}button{padding:12px 20px;margin-right:12px}.reject{color:#8b1e1e}</style><h1>Review verified request</h1><p><b>${escapeHtml(booking.guest_name)}</b> · ${escapeHtml(booking.email)} · ${escapeHtml(booking.phone)}</p><p>${booking.arrival} to ${booking.departure} · ${booking.guests} guests · ${money(booking.quote_cents)}</p><p>Verification: <b>${escapeHtml(booking.verification_status)}</b></p>${report}<p>${escapeHtml(booking.message || "No message.")}</p><form method="post" action="/owner/decision"><input type="hidden" name="id" value="${booking.id}"><input type="hidden" name="token" value="${escapeHtml(url.searchParams.get("token"))}"><button name="decision" value="approve">Approve and send Stripe invoice</button><button class="reject" name="decision" value="reject">Reject</button></form>`);
+  const heading = booking.verification_status === "not_enabled" ? "Review unverified request" : "Review verified request";
+  return html(`<!doctype html><meta name="viewport" content="width=device-width"><title>Review booking</title><style>body{font:16px system-ui;max-width:680px;margin:40px auto;padding:20px;color:#17352d}button{padding:12px 20px;margin-right:12px}.reject{color:#8b1e1e}.warning{padding:12px;background:#fff2cc;border:1px solid #d6a600}</style><h1>${heading}</h1>${booking.verification_status === "not_enabled" ? '<p class="warning"><b>Identity verification is currently disabled.</b> Review this guest manually before approving.</p>' : ""}<p><b>${escapeHtml(booking.guest_name)}</b> · ${escapeHtml(booking.email)} · ${escapeHtml(booking.phone)}</p><p>${booking.arrival} to ${booking.departure} · ${booking.guests} guests · ${money(booking.quote_cents)}</p><p>Verification: <b>${escapeHtml(booking.verification_status)}</b></p>${report}<p>${escapeHtml(booking.message || "No message.")}</p><form method="post" action="/owner/decision"><input type="hidden" name="id" value="${booking.id}"><input type="hidden" name="token" value="${escapeHtml(url.searchParams.get("token"))}"><button name="decision" value="approve">Approve and send Stripe invoice</button><button class="reject" name="decision" value="reject">Reject</button></form>`);
 }
 
 async function ownerDecision(request, env) {
@@ -166,6 +206,22 @@ async function handleStripeWebhook(request, env) {
   const invoice = event.data.object;
   const booking = await row(env, "SELECT * FROM booking_requests WHERE stripe_invoice_id=?", invoice.id);
   if (!booking || booking.status === "paid") return json({ received: true });
+  if (booking.status === "refund_required") {
+    try {
+      await refundInvoice(invoice, booking, env);
+      await env.DB.prepare("UPDATE booking_requests SET status='refunded_conflict',updated_at=? WHERE id=?")
+        .bind(new Date().toISOString(), booking.id).run();
+      await releasePaymentNights(booking.id, env);
+      await Promise.allSettled([
+        sendEmail(booking.email, "Booking payment refunded", "We could not safely block the requested dates. Your payment has been refunded automatically.", env),
+        sendEmail(env.OWNER_EMAIL, "Direct booking refund completed", `${booking.id}: the previously failed automatic refund has now completed.`, env),
+      ]);
+      return json({ received: true, status: "refunded_conflict" });
+    } catch (error) {
+      await forgetEvent(env, "stripe", event.id);
+      throw error;
+    }
+  }
   const claimed = await env.DB.prepare("UPDATE booking_requests SET status='payment_processing',updated_at=? WHERE id=? AND status='awaiting_payment'")
     .bind(new Date().toISOString(), booking.id).run();
   if (!claimed.meta.changes) return json({ received: true });
@@ -176,11 +232,18 @@ async function handleStripeWebhook(request, env) {
       .bind(calendar.eventId, new Date().toISOString(), booking.id).run();
     await releasePaymentNights(booking.id, env);
   } catch (error) {
-    await refundInvoice(invoice, booking, env);
+    try {
+      await refundInvoice(invoice, booking, env);
+    } catch (refundError) {
+      await env.DB.prepare("UPDATE booking_requests SET status='refund_required',last_error=?,updated_at=? WHERE id=?")
+        .bind(String(refundError.message || refundError), new Date().toISOString(), booking.id).run();
+      await forgetEvent(env, "stripe", event.id);
+      throw refundError;
+    }
     await env.DB.prepare("UPDATE booking_requests SET status='refunded_conflict',last_error=?,updated_at=? WHERE id=?")
       .bind(String(error.message || error), new Date().toISOString(), booking.id).run();
     await releasePaymentNights(booking.id, env);
-    await Promise.all([
+    await Promise.allSettled([
       sendEmail(booking.email, "Booking payment refunded", "The dates became unavailable while payment was completing. Your payment has been refunded automatically.", env),
       sendEmail(env.OWNER_EMAIL, "Direct booking conflict refunded", `${booking.id}: ${String(error.message || error)}`, env),
     ]);
@@ -228,8 +291,13 @@ async function createCalendarHold(booking, env) {
 
 async function sendOwnerReviewEmail(booking, token, env) {
   const url = `${env.PUBLIC_API_URL}/owner/review?id=${encodeURIComponent(booking.id)}&token=${encodeURIComponent(token)}`;
-  const body = `${booking.guest_name} completed guest verification (${booking.verification_status}).\n\n${booking.arrival} to ${booking.departure}\n${booking.guests} guests\n${money(booking.quote_cents)}\n\nReview and decide: ${url}\n\nOpening this link does not approve or reject the request.`;
-  return sendEmail(env.OWNER_EMAIL, `Verified stay request: ${booking.arrival} to ${booking.departure}`, body, env);
+  const isUnverified = booking.verification_status === "not_enabled";
+  const verificationLine = isUnverified
+    ? "Identity verification is currently disabled. This guest has NOT been verified."
+    : `${booking.guest_name} completed guest verification (${booking.verification_status}).`;
+  const body = `${verificationLine}\n\nGuest: ${booking.guest_name}\nEmail: ${booking.email}\nPhone: ${booking.phone}\n${booking.arrival} to ${booking.departure}\n${booking.guests} guests\n${money(booking.quote_cents)}\n\nReview and decide: ${url}\n\nOpening this link does not approve or reject the request.`;
+  const subject = `${isUnverified ? "Unverified" : "Verified"} stay request: ${booking.arrival} to ${booking.departure}`;
+  return sendEmail(env.OWNER_EMAIL, subject, body, env);
 }
 
 async function sendEmail(to, subject, text, env) {
@@ -269,7 +337,7 @@ function validateRequest(body, env) {
   const guests = counts.reduce((total, count) => total + count, 0);
   if (guests !== Number(body.guests) || guests < 1 || guests > 12) throw new Error("Choose between 1 and 12 guests.");
   if (!String(body.guestName || "").trim() || !/^\S+@\S+\.\S+$/.test(body.email || "") || !String(body.phone || "").trim()) throw new Error("Name, email, and phone are required.");
-  if (body.screeningConsent !== true) throw new Error("Guest screening consent is required.");
+  if (env.VERIFICATION_MODE === "truvi" && body.screeningConsent !== true) throw new Error("Guest screening consent is required.");
 }
 
 async function verifyTurnstile(token, ip, env) {
@@ -301,6 +369,10 @@ async function releasePaymentNights(bookingId, env) {
 async function eventSeen(env, provider, eventId) {
   const result = await env.DB.prepare("INSERT OR IGNORE INTO processed_events(provider,event_id,processed_at) VALUES(?,?,?)").bind(provider, eventId, new Date().toISOString()).run();
   return result.meta.changes === 0;
+}
+
+async function forgetEvent(env, provider, eventId) {
+  await env.DB.prepare("DELETE FROM processed_events WHERE provider=? AND event_id=?").bind(provider, eventId).run();
 }
 
 async function verifyStripeSignature(payload, header, secret) {

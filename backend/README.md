@@ -6,6 +6,25 @@ This Cloudflare Worker implements the direct-booking state machine:
 
 Rejected, failed, and conflict/refund states are terminal. The public calendar is changed only after a signed Stripe `invoice.paid` event. A D1 `payment_holds` table provides the private 24-hour payment lock and prevents overlapping invoices.
 
+## Verification rollout mode
+
+The workflow can launch before Truvi onboarding is complete. `wrangler.toml` currently sets:
+
+```toml
+VERIFICATION_MODE = "disabled"
+```
+
+In this mode, requests go directly to owner review and are prominently labeled **Unverified**. Turnstile, owner approval/rejection, Stripe invoices, payment holds, signed webhooks, email, and paid-only calendar blocking still operate normally.
+
+After Truvi credentials and its account-specific API mapping are confirmed:
+
+1. Change `VERIFICATION_MODE` to `"truvi"` in `wrangler.toml`.
+2. Change `verificationEnabled` to `true` in `../calendar-config.js`.
+3. Add the Truvi secrets and webhook described below.
+4. Deploy and run the verification test cases before publishing the website change.
+
+Both settings must be changed together. The backend remains authoritative and will require screening consent whenever Truvi mode is enabled.
+
 ## 1. Rotate exposed credentials first
 
 The old Stripe test key and Airbnb iCal token appeared in repository history. Rotate both in Stripe and Airbnb before deployment. Do not reuse them. The current Apps Script reads sensitive values from Script Properties instead of source code.
@@ -13,7 +32,7 @@ The old Stripe test key and Airbnb iCal token appeared in repository history. Ro
 ## 2. Accounts required
 
 - Cloudflare Workers, D1, and Turnstile
-- Truvi with Screening + ID Verification and API access
+- Truvi with Screening + ID Verification and API access (can be added later)
 - Stripe Invoicing
 - Resend with a verified sending domain
 - The existing Google Apps Script and direct-booking calendar
@@ -47,25 +66,24 @@ Paste the returned database ID into `wrangler.toml`, then set `PUBLIC_API_URL`, 
 npm run db:remote
 ```
 
-Store secrets (never put them in `wrangler.toml`):
+Store the secrets needed for the initial verification-disabled launch (never put them in `wrangler.toml`):
 
 ```sh
 npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put TURNSTILE_SECRET_KEY
-npx wrangler secret put TRUVI_API_KEY
-npx wrangler secret put TRUVI_CREATE_BOOKING_URL
-npx wrangler secret put TRUVI_WEBHOOK_SECRET
 npx wrangler secret put CALENDAR_API_URL
 npx wrangler secret put CALENDAR_COMMAND_TOKEN
 ```
+
+Add `TRUVI_API_KEY`, `TRUVI_CREATE_BOOKING_URL`, and `TRUVI_WEBHOOK_SECRET` only when switching `VERIFICATION_MODE` to `truvi`.
 
 Deploy with `npm run deploy`.
 
 ## 5. Configure callbacks
 
-- Truvi webhook: `https://YOUR-WORKER/webhooks/truvi`
+- Truvi webhook when verification is enabled: `https://YOUR-WORKER/webhooks/truvi`
 - Stripe webhook: `https://YOUR-WORKER/webhooks/stripe`
 - Stripe event: `invoice.paid`
 

@@ -19,6 +19,8 @@ CLEANING_FEE_CENTS = "45000"
 PET_FEE_CENTS = "15000"
 STR_TAX_RATE = "0.1275"
 PAYMENT_WINDOW_HOURS = "24"
+# Use "disabled" now. Change to "truvi" after Truvi API onboarding is complete.
+VERIFICATION_MODE = "disabled"
 
 # Add secrets with `wrangler secret put NAME`:
 # STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY,

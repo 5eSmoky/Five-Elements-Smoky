@@ -213,7 +213,7 @@
             <p class="eyebrow">Request stay</p>
             <h3 data-selected-range>Selected dates</h3>
             <div class="price-summary" data-selected-price>Nightly estimate appears after dates are selected.</div>
-            <p>Verify the lead guest, then send a request for owner approval. No payment is taken until approval.</p>
+            <p data-verification-intro>Send a request for owner approval. No payment is taken until approval.</p>
           </div>
           <form class="booking-form" aria-label="Direct booking request">
             <label>
@@ -301,14 +301,14 @@
               Anything we should know?
               <textarea name="message" rows="4" placeholder="Occasion, questions, flexible dates..."></textarea>
             </label>
-            <label class="checkbox-label full screening-consent">
+            <label class="checkbox-label full screening-consent" data-screening-consent hidden>
               <input type="checkbox" name="screeningConsent" required />
               I consent to lead-guest identity verification and screening by Truvi and understand that approval is not guaranteed.
             </label>
-            <p class="privacy-note full">Truvi securely handles the identity document and selfie. Five Elements Smoky stores the verification result, not a copy of the ID.</p>
+            <p class="privacy-note full" data-screening-privacy hidden>Truvi securely handles the identity document and selfie. Five Elements Smoky stores the verification result, not a copy of the ID.</p>
             <div class="cf-turnstile full" data-turnstile-container></div>
-            <button class="button primary full" type="submit">Verify Identity &amp; Request Stay</button>
-            <p class="form-note" data-form-note>3-night minimum. Verification is required before the owner receives your request.</p>
+            <button class="button primary full" type="submit" data-booking-submit>Request Stay</button>
+            <p class="form-note" data-form-note>3-night minimum. The owner will review your request before any payment is requested.</p>
           </form>
         </div>
       </section>

@@ -33,6 +33,10 @@ const selectedPriceLabel = document.querySelector("[data-selected-price]");
 const guestCountFields = document.querySelectorAll("[data-guest-count]");
 const petField = document.querySelector("[data-pet-field]");
 const turnstileContainer = document.querySelector("[data-turnstile-container]");
+const verificationIntro = document.querySelector("[data-verification-intro]");
+const screeningConsent = document.querySelector("[data-screening-consent]");
+const screeningPrivacy = document.querySelector("[data-screening-privacy]");
+const bookingSubmit = document.querySelector("[data-booking-submit]");
 const heroVideo = document.querySelector(".hero-media");
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -43,6 +47,17 @@ const CLEANING_FEE = 450;
 const PET_FEE = 150;
 const STR_TAX_RATE = 0.1275;
 const MIN_NIGHTS = 3;
+const verificationEnabled = calendarConfig.verificationEnabled === true;
+
+if (verificationEnabled) {
+  if (verificationIntro) verificationIntro.textContent = "Verify the lead guest, then send a request for owner approval. No payment is taken until approval.";
+  if (screeningConsent) screeningConsent.hidden = false;
+  if (screeningPrivacy) screeningPrivacy.hidden = false;
+  if (bookingSubmit) bookingSubmit.textContent = "Verify Identity & Request Stay";
+} else {
+  const consentInput = screeningConsent?.querySelector("input");
+  if (consentInput) consentInput.required = false;
+}
 
 const today = new Date();
 let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -432,7 +447,7 @@ async function sendBookingRequest(formData) {
       email: formData.get("email"),
       phone: formData.get("phone"),
       message: formData.get("message"),
-      screeningConsent: formData.get("screeningConsent") === "on",
+      screeningConsent: verificationEnabled && formData.get("screeningConsent") === "on",
       turnstileToken: formData.get("cf-turnstile-response"),
     }),
   });
@@ -502,8 +517,8 @@ form.addEventListener("submit", async (event) => {
   }
 
   formNote.textContent = availabilityLoaded
-    ? "Rechecking availability and starting secure verification..."
-    : "Checking availability and starting secure verification...";
+    ? (verificationEnabled ? "Rechecking availability and starting secure verification..." : "Rechecking availability and sending your request...")
+    : (verificationEnabled ? "Checking availability and starting secure verification..." : "Checking availability and sending your request...");
 
   try {
     const result = await sendBookingRequest(formData);
@@ -524,10 +539,12 @@ form.addEventListener("submit", async (event) => {
     selectedDates = [];
     renderCalendar();
     updateBookingRequestPanel();
-    setCalendarStatus("Verification received. Dates remain available until payment is completed.", "success");
-    formNote.textContent = "Verification received. We will email you after the owner approves or declines the request.";
+    setCalendarStatus("Request received. Dates remain available until payment is completed.", "success");
+    formNote.textContent = "Request received. We will email you after the owner approves or declines it.";
   } catch (error) {
-    formNote.textContent = "Something went wrong while starting verification. Please try again or email us directly.";
+    formNote.textContent = verificationEnabled
+      ? "Something went wrong while starting verification. Please try again or email us directly."
+      : "Something went wrong while sending the request. Please try again or email us directly.";
   }
 });
 
