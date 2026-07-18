@@ -175,10 +175,6 @@ async function handleStripeWebhook(request, env) {
     await env.DB.prepare("UPDATE booking_requests SET status='paid',calendar_event_id=?,updated_at=? WHERE id=?")
       .bind(calendar.eventId, new Date().toISOString(), booking.id).run();
     await releasePaymentNights(booking.id, env);
-    await Promise.all([
-      sendEmail(booking.email, "Five Elements Smoky booking confirmed", `Your payment was received and your stay from ${booking.arrival} to ${booking.departure} is confirmed. Booking reference: ${booking.id}`, env),
-      sendEmail(env.OWNER_EMAIL, "Paid direct booking confirmed", `${booking.guest_name} paid for ${booking.arrival} to ${booking.departure}. The calendar is blocked. Reference: ${booking.id}`, env),
-    ]);
   } catch (error) {
     await refundInvoice(invoice, booking, env);
     await env.DB.prepare("UPDATE booking_requests SET status='refunded_conflict',last_error=?,updated_at=? WHERE id=?")
@@ -188,7 +184,15 @@ async function handleStripeWebhook(request, env) {
       sendEmail(booking.email, "Booking payment refunded", "The dates became unavailable while payment was completing. Your payment has been refunded automatically.", env),
       sendEmail(env.OWNER_EMAIL, "Direct booking conflict refunded", `${booking.id}: ${String(error.message || error)}`, env),
     ]);
+    return json({ received: true, status: "refunded_conflict" });
   }
+
+  // Email delivery must never undo a successfully paid and calendar-blocked booking.
+  const notices = await Promise.allSettled([
+    sendEmail(booking.email, "Five Elements Smoky booking confirmed", `Your payment was received and your stay from ${booking.arrival} to ${booking.departure} is confirmed. Booking reference: ${booking.id}`, env),
+    sendEmail(env.OWNER_EMAIL, "Paid direct booking confirmed", `${booking.guest_name} paid for ${booking.arrival} to ${booking.departure}. The calendar is blocked. Reference: ${booking.id}`, env),
+  ]);
+  notices.filter((notice) => notice.status === "rejected").forEach((notice) => console.error("Confirmation email failed", notice.reason));
   return json({ received: true });
 }
 
