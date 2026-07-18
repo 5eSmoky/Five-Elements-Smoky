@@ -301,7 +301,9 @@ function getNightlyPrices() {
     throw new Error("Price calendar format was not recognized.");
   }
 
-  return JSON.parse(match[1]);
+  // The browser accepts trailing commas in this JavaScript object, but
+  // JSON.parse does not. Normalize them before parsing the public rate file.
+  return JSON.parse(match[1].replace(/,\s*}/g, "}"));
 }
 
 function expandRange(arrival, departure) {
