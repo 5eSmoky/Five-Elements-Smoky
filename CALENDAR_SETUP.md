@@ -3,7 +3,7 @@
 This setup uses one inbound calendar and one outbound calendar:
 
 - Inbound: Airbnb iCal export. Airbnb already syncs with Vrbo, so the website only needs to read Airbnb.
-- Outbound: Google Calendar for approved direct bookings. Airbnb imports this Google Calendar iCal URL and blocks only approved website bookings.
+- Outbound: Google Calendar for paid direct bookings. Airbnb imports this Google Calendar iCal URL and blocks pending or approved website bookings.
 
 ## 1. Get The Airbnb iCal URL
 
@@ -83,17 +83,36 @@ STRIPE_SECRET_KEY: "PASTE_STRIPE_SECRET_KEY_HERE",
 3. Confirm these URLs match the live website:
 
 ```js
-SITE_URL: "https://fiveelementssmoky.com",
-PRICE_CALENDAR_URL: "https://fiveelementssmoky.com/price-calendar.js",
+SITE_URL: "https://fiveelementsdestin.com",
+PRICE_CALENDAR_URL: "https://fiveelementsdestin.com/price-calendar.js",
 ```
 
-4. Redeploy the Apps Script web app after changing the script.
-5. Make a short test booking with Stripe test card `4242 4242 4242 4242`, any future expiration date, any CVC, and any ZIP code.
+4. Set a long random webhook token:
+
+```js
+STRIPE_WEBHOOK_TOKEN: "PASTE_RANDOM_WEBHOOK_TOKEN_HERE",
+```
+
+5. Redeploy the Apps Script web app after changing the script.
+6. In Stripe, add a webhook endpoint:
+
+```text
+PASTE_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE?action=stripeWebhook&token=PASTE_RANDOM_WEBHOOK_TOKEN_HERE
+```
+
+Listen for this event:
+
+```text
+checkout.session.completed
+```
+
+7. Make a short test booking with Stripe test card `4242 4242 4242 4242`, any future expiration date, any CVC, and any ZIP code.
 
 ## Important Notes
 
 - iCal syncing is not instant. Airbnb and Vrbo poll imported calendars on their own schedule.
 - Departure dates are checkout dates, so they are not blocked as a booked night.
 - Stripe Checkout is created by Apps Script so the Stripe secret key is never exposed in the browser.
-- Dates are not blocked automatically after payment. Confirm payment in Stripe, then add the hold or booking to the direct-booking Google Calendar.
+- After Stripe confirms payment through the webhook, Apps Script creates a pending Google Calendar hold. The owner approval email has links to approve or reject/refund the booking.
+- Rejecting a booking deletes the Google Calendar hold and creates a full Stripe refund.
 - Pricing is loaded from the public `price-calendar.js` file for Checkout. Keep that file published with the website whenever rates change.

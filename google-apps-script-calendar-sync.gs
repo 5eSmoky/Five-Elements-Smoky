@@ -14,11 +14,15 @@ const CONFIG = {
   // Use a test key while testing, then replace it with the live secret key.
   STRIPE_SECRET_KEY: "sk_test_51TpTE29eCKmHydxwksNYwiC0hc58GLtuJGBk65qZc2FzF3qxvwaY5T5zrYpEPUuCKGFEHBUSCygBZlVVL6PA8o2p001rEgbWSg",
 
+  // Add this token to the Stripe webhook URL as ?action=stripeWebhook&token=...
+  // Use a long random value before going live.
+  STRIPE_WEBHOOK_TOKEN: "PASTE_RANDOM_WEBHOOK_TOKEN_HERE",
+
   // Public website URL, without a trailing slash.
-  SITE_URL: "https://fiveelementssmoky.com",
+  SITE_URL: "https://fiveelementsdestin.com",
 
   // Public URL where the website serves price-calendar.js.
-  PRICE_CALENDAR_URL: "https://fiveelementssmoky.com/price-calendar.js",
+  PRICE_CALENDAR_URL: "https://fiveelementsdestin.com/price-calendar.js",
 
   CLEANING_FEE: 450,
   PET_FEE: 150,
@@ -29,8 +33,16 @@ const CONFIG = {
 function doGet(event) {
   const action = event.parameter.action || "availability";
 
+  if (action === "approveBooking") {
+    return approveBooking(event.parameter.booking, event.parameter.token);
+  }
+
+  if (action === "rejectBooking") {
+    return rejectBooking(event.parameter.booking, event.parameter.token);
+  }
+
   if (action !== "availability") {
-    return jsonResponse({ ok: false, message: "Unknown action." });
+    return textResponse("Unknown action.");
   }
 
   return jsonResponse({
@@ -41,6 +53,10 @@ function doGet(event) {
 }
 
 function doPost(event) {
+  if ((event.parameter.action || "") === "stripeWebhook") {
+    return handleStripeWebhook(event);
+  }
+
   const payload = JSON.parse(event.postData.contents || "{}");
 
   if (payload.action === "createCheckoutSession") {
@@ -89,7 +105,7 @@ function doPost(event) {
     priceLines.length ? priceLines.join("\n") : "Rate estimate needs confirmation.",
     "",
     "Approval note:",
-    "These dates were not blocked automatically. Add an approved hold or booking to the direct-booking calendar before confirming with the guest.",
+    "For paid Stripe checkouts, the webhook blocks the dates automatically and sends approval/rejection links.",
     "",
     "Guest message:",
     payload.message || "No message.",
@@ -181,6 +197,38 @@ function createCheckoutSession(payload) {
         : "Stripe checkout could not be created.",
     });
   }
+
+  saveBookingRecord({
+    bookingId,
+    token: Utilities.getUuid(),
+    status: "checkout_created",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    arrival,
+    departure,
+    adults: Number(payload.adults || 0),
+    teens: Number(payload.teens || 0),
+    children: Number(payload.children || 0),
+    guests: guestCount,
+    pets: Boolean(payload.pets),
+    email: payload.email || "",
+    message: payload.message || "",
+    checkoutSessionId: responseBody.id,
+    paymentIntentId: "",
+    calendarEventId: "",
+    quote: {
+      nights: quote.nights.length,
+      nightlySubtotal: quote.nightlySubtotal,
+      cleaningFee: quote.cleaningFee,
+      petFee: quote.petFee,
+      taxAmount: quote.taxAmount,
+      finalTotal: quote.finalTotal,
+    },
+    priceLines: priceLines.map((line) => ({
+      label: line.label,
+      amount: line.amount,
+    })),
+  });
 
   sendOwnerCheckoutEmail(payload, quote, priceLines, bookingId, responseBody.id);
 
@@ -387,8 +435,8 @@ function sendOwnerCheckoutEmail(payload, quote, priceLines, bookingId, checkoutS
     "Checkout estimate:",
     priceLines.map((line) => `${line.label}: ${formatPrice(line.amount)}`).join("\n"),
     "",
-    "Approval note:",
-    "After payment is confirmed in Stripe, add the approved hold or booking to the direct-booking Google Calendar so Airbnb blocks the dates.",
+    "Next step:",
+    "If the guest completes Stripe checkout, the webhook will block these dates on the direct-booking Google Calendar and send approval/rejection links.",
     "",
     "Guest message:",
     payload.message || "No message.",
@@ -401,11 +449,349 @@ function sendOwnerCheckoutEmail(payload, quote, priceLines, bookingId, checkoutS
   });
 }
 
+function handleStripeWebhook(event) {
+  if (!CONFIG.STRIPE_WEBHOOK_TOKEN || CONFIG.STRIPE_WEBHOOK_TOKEN.includes("PASTE_")) {
+    return jsonResponse({ received: false, message: "Stripe webhook token is not configured." });
+  }
+
+  if (event.parameter.token !== CONFIG.STRIPE_WEBHOOK_TOKEN) {
+    return jsonResponse({ received: false, message: "Invalid webhook token." });
+  }
+
+  const stripeEvent = JSON.parse(event.postData.contents || "{}");
+
+  if (stripeEvent.type !== "checkout.session.completed") {
+    return jsonResponse({ received: true, ignored: true });
+  }
+
+  const session = stripeEvent.data && stripeEvent.data.object ? stripeEvent.data.object : {};
+  const bookingId = session.client_reference_id
+    || (session.metadata && session.metadata.booking_id)
+    || "";
+
+  if (!bookingId) {
+    return jsonResponse({ received: false, message: "Booking ID was not provided by Stripe." });
+  }
+
+  const booking = getBookingRecord(bookingId);
+  if (!booking) {
+    return jsonResponse({ received: false, message: "Booking record was not found." });
+  }
+
+  if (booking.status === "calendar_held" || booking.status === "approved") {
+    return jsonResponse({ received: true, bookingId, status: booking.status });
+  }
+
+  booking.paymentIntentId = session.payment_intent || booking.paymentIntentId || "";
+  booking.checkoutSessionId = session.id || booking.checkoutSessionId || "";
+  booking.paidAt = new Date().toISOString();
+
+  if (rangeTouchesBlockedDate(booking.arrival, booking.departure)) {
+    const refund = refundBookingPayment(booking, "Dates became unavailable before payment completed.");
+    booking.status = "refunded_conflict";
+    booking.refundId = refund.id || "";
+    booking.updatedAt = new Date().toISOString();
+    saveBookingRecord(booking);
+    sendOwnerBookingConflictEmail(booking, refund);
+    sendGuestRejectedEmail(booking, refund);
+    return jsonResponse({ received: true, bookingId, status: booking.status });
+  }
+
+  let calendarEvent;
+  try {
+    calendarEvent = createPendingBookingHold(booking);
+    booking.calendarEventId = calendarEvent.getId();
+    booking.status = "calendar_held";
+    booking.updatedAt = new Date().toISOString();
+    saveBookingRecord(booking);
+  } catch (error) {
+    const refund = refundBookingPayment(booking, "Calendar hold could not be created.");
+    booking.status = "refunded_calendar_error";
+    booking.refundId = refund.id || "";
+    booking.calendarError = String(error && error.message ? error.message : error);
+    booking.updatedAt = new Date().toISOString();
+    saveBookingRecord(booking);
+    sendOwnerBookingConflictEmail(booking, refund);
+    sendGuestRejectedEmail(booking, refund);
+    return jsonResponse({ received: true, bookingId, status: booking.status });
+  }
+
+  sendOwnerPaidBookingEmail(booking);
+  sendGuestPendingApprovalEmail(booking);
+
+  return jsonResponse({ received: true, bookingId, status: booking.status });
+}
+
+function createPendingBookingHold(booking) {
+  const calendar = CalendarApp.getCalendarById(CONFIG.DIRECT_BOOKING_CALENDAR_ID);
+  const title = `Pending direct booking: ${booking.arrival} to ${booking.departure}`;
+  const description = buildBookingDescription(booking, [
+    "Status: Pending host approval",
+    "These dates are blocked because the guest completed Stripe checkout.",
+    "Use the host email links to approve or reject/refund this booking.",
+  ]);
+
+  return calendar.createAllDayEvent(
+    title,
+    parseDateKey(booking.arrival),
+    parseDateKey(booking.departure),
+    { description },
+  );
+}
+
+function approveBooking(bookingId, token) {
+  const booking = getBookingRecord(bookingId);
+  const validation = validateHostAction(booking, token);
+  if (validation) return validation;
+
+  const event = getBookingCalendarEvent(booking);
+  if (event) {
+    event.setTitle(`Approved direct booking: ${booking.arrival} to ${booking.departure}`);
+    event.setDescription(buildBookingDescription(booking, [
+      "Status: Approved by host",
+      `Approved at: ${new Date().toISOString()}`,
+    ]));
+  }
+
+  booking.status = "approved";
+  booking.approvedAt = new Date().toISOString();
+  booking.updatedAt = new Date().toISOString();
+  saveBookingRecord(booking);
+
+  sendGuestApprovedEmail(booking);
+  return textResponse("Booking approved. The calendar hold remains in place.");
+}
+
+function rejectBooking(bookingId, token) {
+  const booking = getBookingRecord(bookingId);
+  const validation = validateHostAction(booking, token);
+  if (validation) return validation;
+
+  const refund = refundBookingPayment(booking, "Host rejected the direct booking.");
+  const event = getBookingCalendarEvent(booking);
+  if (event) {
+    event.deleteEvent();
+  }
+
+  booking.status = "rejected_refunded";
+  booking.rejectedAt = new Date().toISOString();
+  booking.refundId = refund.id || "";
+  booking.updatedAt = new Date().toISOString();
+  saveBookingRecord(booking);
+
+  sendGuestRejectedEmail(booking, refund);
+  return textResponse("Booking rejected. The calendar hold was removed and the Stripe payment was fully refunded.");
+}
+
+function validateHostAction(booking, token) {
+  if (!booking) {
+    return textResponse("Booking was not found.");
+  }
+
+  if (!token || token !== booking.token) {
+    return textResponse("This approval link is invalid.");
+  }
+
+  if (
+    booking.status === "rejected_refunded"
+    || booking.status === "refunded_conflict"
+    || booking.status === "refunded_calendar_error"
+  ) {
+    return textResponse("This booking has already been refunded.");
+  }
+
+  if (booking.status === "approved") {
+    return textResponse("This booking has already been approved.");
+  }
+
+  if (!booking.paymentIntentId) {
+    return textResponse("Stripe payment is not complete yet, so this booking cannot be approved or rejected.");
+  }
+
+  return null;
+}
+
+function refundBookingPayment(booking, reason) {
+  if (!booking.paymentIntentId) {
+    throw new Error("Payment intent is missing; refund could not be created.");
+  }
+
+  const response = UrlFetchApp.fetch("https://api.stripe.com/v1/refunds", {
+    method: "post",
+    headers: {
+      Authorization: `Bearer ${CONFIG.STRIPE_SECRET_KEY}`,
+    },
+    payload: {
+      payment_intent: booking.paymentIntentId,
+      reason: "requested_by_customer",
+      "metadata[booking_id]": booking.bookingId,
+      "metadata[refund_reason]": reason,
+    },
+    muteHttpExceptions: true,
+  });
+  const responseBody = JSON.parse(response.getContentText() || "{}");
+
+  if (response.getResponseCode() >= 400 || !responseBody.id) {
+    throw new Error(responseBody.error && responseBody.error.message
+      ? responseBody.error.message
+      : "Stripe refund could not be created.");
+  }
+
+  return responseBody;
+}
+
+function getBookingCalendarEvent(booking) {
+  if (!booking.calendarEventId) return null;
+
+  const calendar = CalendarApp.getCalendarById(CONFIG.DIRECT_BOOKING_CALENDAR_ID);
+  return calendar.getEventById(booking.calendarEventId);
+}
+
+function sendOwnerPaidBookingEmail(booking) {
+  if (!CONFIG.OWNER_EMAIL || CONFIG.OWNER_EMAIL.includes("PASTE_")) {
+    return;
+  }
+
+  const actionLinks = getHostActionLinks(booking);
+  const description = [
+    buildBookingDescription(booking, [
+      "Status: Paid and calendar blocked pending host approval",
+    ]),
+    "",
+    `Approve booking: ${actionLinks.approveUrl}`,
+    `Reject and fully refund: ${actionLinks.rejectUrl}`,
+  ].join("\n");
+
+  MailApp.sendEmail({
+    to: CONFIG.OWNER_EMAIL,
+    subject: `Five Elements Smoky paid booking needs approval: ${booking.arrival} to ${booking.departure}`,
+    body: description,
+  });
+}
+
+function sendOwnerBookingConflictEmail(booking, refund) {
+  if (!CONFIG.OWNER_EMAIL || CONFIG.OWNER_EMAIL.includes("PASTE_")) {
+    return;
+  }
+
+  MailApp.sendEmail({
+    to: CONFIG.OWNER_EMAIL,
+    subject: `Five Elements Smoky booking refunded because dates were unavailable: ${booking.arrival} to ${booking.departure}`,
+    body: buildBookingDescription(booking, [
+      "Status: Refunded automatically because the dates became unavailable before payment completed.",
+      `Refund ID: ${refund.id || "Not provided"}`,
+    ]),
+  });
+}
+
+function sendGuestPendingApprovalEmail(booking) {
+  if (!booking.email) return;
+
+  MailApp.sendEmail({
+    to: booking.email,
+    subject: `Five Elements Smoky booking received: ${booking.arrival} to ${booking.departure}`,
+    body: [
+      "Thanks for booking Five Elements Smoky.",
+      "",
+      "Your payment was received and your dates are blocked while the host reviews the booking.",
+      "We will email you when the host approves it. If the host rejects it, your payment will be fully refunded.",
+      "",
+      `Booking ID: ${booking.bookingId}`,
+    ].join("\n"),
+  });
+}
+
+function sendGuestApprovedEmail(booking) {
+  if (!booking.email) return;
+
+  MailApp.sendEmail({
+    to: booking.email,
+    subject: `Five Elements Smoky booking approved: ${booking.arrival} to ${booking.departure}`,
+    body: [
+      "Your Five Elements Smoky booking has been approved.",
+      "",
+      `Arrival: ${booking.arrival}`,
+      `Departure: ${booking.departure}`,
+      `Booking ID: ${booking.bookingId}`,
+    ].join("\n"),
+  });
+}
+
+function sendGuestRejectedEmail(booking, refund) {
+  if (!booking.email) return;
+
+  MailApp.sendEmail({
+    to: booking.email,
+    subject: `Five Elements Smoky booking refunded: ${booking.arrival} to ${booking.departure}`,
+    body: [
+      "Your Five Elements Smoky booking was not approved, so your payment has been fully refunded.",
+      "",
+      `Arrival: ${booking.arrival}`,
+      `Departure: ${booking.departure}`,
+      `Booking ID: ${booking.bookingId}`,
+      `Refund ID: ${refund.id || "Not provided"}`,
+    ].join("\n"),
+  });
+}
+
+function getHostActionLinks(booking) {
+  const baseUrl = ScriptApp.getService().getUrl();
+  const query = `booking=${encodeURIComponent(booking.bookingId)}&token=${encodeURIComponent(booking.token)}`;
+
+  return {
+    approveUrl: `${baseUrl}?action=approveBooking&${query}`,
+    rejectUrl: `${baseUrl}?action=rejectBooking&${query}`,
+  };
+}
+
+function buildBookingDescription(booking, extraLines) {
+  const lines = [
+    `Booking ID: ${booking.bookingId}`,
+    `Stripe Checkout Session: ${booking.checkoutSessionId || "Not provided"}`,
+    `Stripe Payment Intent: ${booking.paymentIntentId || "Not provided"}`,
+    `Guest email: ${booking.email || "Not provided"}`,
+    `Guests: ${booking.guests || "Not provided"} total`,
+    `Adults: ${booking.adults || 0}`,
+    `Teens: ${booking.teens || 0}`,
+    `Children: ${booking.children || 0}`,
+    `Pets: ${booking.pets ? "Yes" : "No"}`,
+    `Arrival: ${booking.arrival}`,
+    `Departure: ${booking.departure}`,
+    `Nights: ${booking.quote && booking.quote.nights ? booking.quote.nights : getNightCount(booking.arrival, booking.departure)}`,
+    `Total paid: ${booking.quote && booking.quote.finalTotal ? formatPrice(booking.quote.finalTotal) : "Not provided"}`,
+    "",
+    "Guest message:",
+    booking.message || "No message.",
+  ];
+
+  return lines.concat([""], extraLines || []).join("\n");
+}
+
+function saveBookingRecord(booking) {
+  PropertiesService
+    .getScriptProperties()
+    .setProperty(getBookingPropertyKey(booking.bookingId), JSON.stringify(booking));
+}
+
+function getBookingRecord(bookingId) {
+  if (!bookingId) return null;
+
+  const value = PropertiesService
+    .getScriptProperties()
+    .getProperty(getBookingPropertyKey(bookingId));
+
+  return value ? JSON.parse(value) : null;
+}
+
+function getBookingPropertyKey(bookingId) {
+  return `BOOKING_${bookingId}`;
+}
+
 function getSafeReturnUrl(pageUrl) {
   const configuredUrl = CONFIG.SITE_URL && !CONFIG.SITE_URL.includes("PASTE_")
     ? CONFIG.SITE_URL
     : "";
-  const fallbackUrl = configuredUrl || "https://fiveelementssmoky.com";
+  const fallbackUrl = configuredUrl || "https://fiveelementsdestin.com";
 
   if (!pageUrl) {
     return fallbackUrl;
@@ -511,4 +897,10 @@ function jsonResponse(payload) {
   return ContentService
     .createTextOutput(JSON.stringify(payload))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function textResponse(message) {
+  return ContentService
+    .createTextOutput(message)
+    .setMimeType(ContentService.MimeType.TEXT);
 }
